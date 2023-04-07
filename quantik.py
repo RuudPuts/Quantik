@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from enum import Enum
 from utils import flatten, Vector2
+import json
 
 class PieceType(Enum):
   CYLINDER = "Cylinder"
@@ -59,10 +60,70 @@ class Game:
   active_player: Player
   winner = None
 
-  def __init__(self):
-    self.player1 = Player(color="white")
-    self.player2 = Player(color="black")
-    self.active_player = self.player1
+  def __init__(self, data=None):
+    if data:
+      self.player1 = Player(color=data["player1"]["color"])
+      self.player2 = Player(color=data["player2"]["color"])
+      if data["active_player"] == self.player1.color:
+        self.active_player = self.player1
+      else:
+        self.active_player = self.player2
+
+      moves = {
+        self.player1.color: data["player1"]["pieces"],
+        self.player2.color: data["player2"]["pieces"]
+      }
+      for player_color, pieces in moves.items():
+        # 🤷‍♂️
+        if player_color == self.player1.color:
+          player = self.player1
+        else:
+          player = self.player2
+
+        for piece_type_value, position in pieces.items():
+          if position is None:
+            continue
+          piece_type = PieceType(piece_type_value)
+
+          piece = player.get_piece(piece_type)
+          piece.position = Vector2(position[0], position[1])
+    else:
+      self.player1 = Player(color="white")
+      self.player2 = Player(color="black")
+      self.active_player = self.player1
+
+  def dump(self, to_file=False):
+    def player_pieces(player):
+      pieces = {}
+      for piece in player.pieces:
+        if piece.position:
+          pieces[piece.type.value] = (piece.position.x, piece.position.y)
+        else:
+          pieces[piece.type.value] = None
+      return pieces
+
+    data = {
+      "player1": {
+        "color": self.player1.color,
+        "pieces": player_pieces(self.player1)
+      },
+      "player2": {
+        "color": self.player2.color,
+        "pieces": player_pieces(self.player2)
+      },
+      "active_player": self.active_player.color
+    }
+
+    data_json = json.dumps(data, indent=2)
+    if to_file:
+      with open("game.json", "w") as outfile:
+        outfile.write(data_json)
+    else:
+      print("")
+      print(data_json)
+      print("")
+
+    return data
 
   @property
   def players(self):
@@ -87,13 +148,13 @@ class Game:
 
   def set_position(self, piece, position):
     if self.winner is not None:
-      return None
+      return False
 
     if self.piece_at(position) != None:
-      return None
+      return False
 
     if piece.type not in set(map(lambda x: x.type, flatten(self.allowed_pieces_at(position).values()))):
-      return None
+      return False
 
     is_winning_move, winning_move_pieces = self.is_winning_move(piece, position)
     if is_winning_move:
@@ -103,7 +164,7 @@ class Game:
 
     self.toggle_active_player()
 
-    return None
+    return True
 
   def piece_at(self, position):
     for player in self.players:

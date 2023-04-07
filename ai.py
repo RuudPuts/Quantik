@@ -1,7 +1,7 @@
 import random
 from collections import defaultdict
 from utils import Vector2
-from quantik import Game
+from quantik import Game, Piece
 
 class AI:
   game: Game
@@ -20,37 +20,33 @@ class AI:
           continue
 
         for piece in self.game.allowed_pieces_at(vector)[self.game.active_player]:
-          winnig_move, _ = self.game.is_winning_move(piece, vector)
-
-          if winnig_move:
-            scores[100][piece.type].append(vector)
-          else:
-            scores[50][piece.type].append(vector)
+          score = self.calculate_score(piece, vector)
+          scores[score][piece.type].append(vector)
 
     return scores
+
+  def calculate_score(self, piece: Piece, vector: Vector2):
+    winnig_move, _ = self.game.is_winning_move(piece, vector)
+    score = 50
+
+    if winnig_move:
+      score = 100
+
+    return score
 
   def calculate_best_move(self):
       scores = self.calculate_move_scores()
       max_score = max(scores.keys())
 
       moves = scores[max_score]
-      # print("")
-      # print(f"{max_score=}")
-      # print(f"{moves=}")
 
       pieces = list(moves.keys())
       best_piece_types = map(lambda x: x.type, self.game.inactive_player.available_pieces)
       best_pieces = list(filter(lambda x: x in best_piece_types, pieces))
-      # print(f"{pieces=}")
-      # print(f"{best_pieces=}")
       if len(best_pieces) > 0:
         pieces = best_pieces
 
       random_piece = random.choice(pieces)
       random_position = random.choice(moves[random_piece])
-
-      # print(f"{random_piece=}")
-      # print(f"{random_position=}")
-
 
       return random_piece, random_position

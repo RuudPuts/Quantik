@@ -14,7 +14,14 @@ running = True
 frame_time = 0
 
 # game setup
-game = Game()
+import json
+
+load_from_dump = False
+if load_from_dump:
+  with open('game.json') as f:
+    game = Game(data=json.load(f))
+else:
+  game = Game()
 selected_piece = None
 
 def draw_text(text, position, color, size=48):
