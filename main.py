@@ -1,5 +1,6 @@
 import math
 import pygame
+from ai import AI
 from utils import Vector2
 from quantik import Game, PieceType
 
@@ -14,11 +15,6 @@ frame_time = 0
 # game setup
 game = Game()
 selected_piece = None
-# result1 = game.set_position(game.player1.cylinder, Vector2(0, 0))
-# result2 = game.set_position(game.player2.cylinder, Vector2(1, 2))
-# result3 = game.set_position(game.player1.triangle, Vector2(1, 1))
-# result4 = game.set_position(game.player2.square, Vector2(1, 0))
-# result5 = game.set_position(game.player1.plus, Vector2(0, 1))
 
 def draw_text(text, position, color, size=48):
   font = pygame.font.SysFont(None, size)
@@ -69,6 +65,8 @@ def draw_play_board():
             exclude_x = board_x_offset + position.x * piece_square_size + piece_square_size / 2
             exclude_y = board_y_offset + position.y * piece_square_size + piece_square_size / 2
             pygame.draw.rect(window, "green", (exclude_x - exclude_size / 2, exclude_y - exclude_size / 2, exclude_size, exclude_size))
+  elif game.in_stale_mate:
+    draw_text(f"It's a draw!", (window.get_width() / 2 - 110, board_y_offset * 0.4), "orange")
 
 
 def draw_board_pieces():
@@ -95,16 +93,19 @@ def draw_board_pieces():
         else:
           pygame.draw.circle(window, "grey", (x, y), 10)
 
-        allowed_pieces = game.allowed_pieces_at(Vector2(column, row))
-        piece_option_size = piece_size / 4
-        piece_option_y = y - piece_option_size * 0.75 - 10
-        for (allowed_piece_player, allowed_pieces) in allowed_pieces.items():
-          piece_option_x = x - (len(allowed_pieces) * piece_option_size * 0.75) / 2
-          for allowed_piece in allowed_pieces:
-            draw_piece(allowed_piece.type, allowed_piece_player.color, (piece_option_x, piece_option_y), piece_option_size)
+        # allowed_pieces = game.allowed_pieces_at(Vector2(column, row))
+        # piece_option_size = piece_size / 4
+        # piece_option_y = y - piece_option_size * 0.75 - 10
+        # for (allowed_piece_player, allowed_pieces) in allowed_pieces.items():
+        #   piece_option_x = x - (len(allowed_pieces) * piece_option_size * 0.75) / 2
+        #   for allowed_piece in allowed_pieces:
+        #     draw_piece(allowed_piece.type, allowed_piece_player.color, (piece_option_x, piece_option_y), piece_option_size)
+        #     # if allowed_piece_player == game.active_player:
+        #     #   score = ai_scores[(column, row)][allowed_piece.type]
+        #     #   draw_text(str(score), (piece_option_x - piece_option_size/2, piece_option_y+piece_option_size/1.6), "red", 20)
 
-            piece_option_x += piece_option_size * 1.2
-          piece_option_y += piece_option_size * 2.8
+        #     piece_option_x += piece_option_size * 1.2
+        #   piece_option_y += piece_option_size * 2.8
 
 
       x += piece_square_size
@@ -124,7 +125,10 @@ def draw_players():
         text_x_offset += player_x_offset
 
       title_y_offset = board_y_offset
-      title_rect = draw_text(f"{player.name} player", (text_x_offset, title_y_offset), player.color)
+      title = f"{player.name} player"
+      if player2_is_bot and player == game.player2:
+        title += " (AI)"
+      title_rect = draw_text(title, (text_x_offset, title_y_offset), player.color)
       if game.active_player == player:
         bar_y_offset = title_y_offset + title_rect.height + 4
         pygame.draw.rect(window, player.color, (text_x_offset, bar_y_offset, title_rect.width, 4))
@@ -169,36 +173,35 @@ def draw_mouse():
 
   board_size, board_x_offset, board_y_offset = determine_board_size()
 
-  mouse_interaction = mouse_interaction_with()
-  if mouse_interaction is None:
-    return
+  highlight_mouse = False
+  if highlight_mouse:
+    mouse_interaction = mouse_interaction_with()
+    if mouse_interaction is None:
+      return
 
-  section, data = mouse_interaction
+    section, data = mouse_interaction
 
-  if section == "board":
-    pass
-    # square_size = board_size / 4
-    # column = data[0]
-    # row = data[1]
+    if section == "board":
+      square_size = board_size / 4
+      column = data[0]
+      row = data[1]
 
-    # blop_pos = (
-    #   board_x_offset + column * square_size + square_size / 2,
-    #   board_y_offset + row * square_size + square_size / 2
-    # )
-    # pygame.draw.circle(window, "red", blop_pos, 40)
-  else:
-    row = data
-    row_height = inventory_piece_offset
+      blop_pos = (
+        board_x_offset + column * square_size + square_size / 2,
+        board_y_offset + row * square_size + square_size / 2
+      )
+      pygame.draw.circle(window, "red", blop_pos, 40)
+    else:
+      row = data
+      row_height = inventory_piece_offset
 
-    piece_x_offset = board_x_offset * 0.5
-    piece_y_offset = board_y_offset + inventory_y_offset + row * row_height
-    if section == "player1" and game.active_player == game.player1:
-      pygame.draw.circle(window, game.player2.color, (piece_x_offset, piece_y_offset), int(inventory_piece_size * .8), 5)
-      # pygame.draw.rect(window, "blue", (board_x_offset * 0.36, board_y_offset * 1.8 + row * row_height, board_x_offset * 0.6 - board_x_offset * 0.36, row_height))
-    elif section == "player2" and game.active_player == game.player2:
-      piece_x_offset += board_size + board_x_offset
-      pygame.draw.circle(window, game.player1.color, (piece_x_offset, piece_y_offset), int(inventory_piece_size * .8), 5)
-      # pygame.draw.rect(window, "yellow", (board_size + board_x_offset + board_x_offset * 0.36, board_y_offset * 1.8 + row * row_height, board_x_offset * 0.6 - board_x_offset * 0.36, row_height))
+      piece_x_offset = board_x_offset * 0.5
+      piece_y_offset = board_y_offset + inventory_y_offset + row * row_height
+      if section == "player1" and game.active_player == game.player1:
+        pygame.draw.circle(window, game.player2.color, (piece_x_offset, piece_y_offset), int(inventory_piece_size * .8), 5)
+      elif section == "player2" and game.active_player == game.player2:
+        piece_x_offset += board_size + board_x_offset
+        pygame.draw.circle(window, game.player1.color, (piece_x_offset, piece_y_offset), int(inventory_piece_size * .8), 5)
 
 def mouse_interaction_with():
   mouse_pos = pygame.mouse.get_pos()
@@ -234,6 +237,14 @@ def mouse_interaction_with():
         else:
           return "player1", row
 
+
+# game.set_position(game.player1.cylinder, Vector2(0, 0))
+# result2 = game.set_position(game.player2.cylinder, Vector2(1, 2))
+# result3 = game.set_position(game.player1.triangle, Vector2(1, 1))
+# result4 = game.set_position(game.player2.square, Vector2(1, 0))
+# result5 = game.set_position(game.player1.plus, Vector2(0, 1))
+
+player2_is_bot = True
 while running:
     # poll for events
     # pygame.QUIT event means the user clicked X to close your window
@@ -243,26 +254,31 @@ while running:
 
         elif event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:
-                  if game.winner is not None:
+                  if game.winner is not None or game.in_stale_mate:
                     game = Game()
                   else:
-                    mouse_interaction = mouse_interaction_with()
-                    if mouse_interaction is None:
-                      continue
+                    if player2_is_bot and game.active_player == game.player2:
+                      ai = AI(game)
+                      piece_type, position = ai.calculate_best_move()
+                      game.set_position(game.active_player.get_piece(piece_type), position)
+                    else:
+                      mouse_interaction = mouse_interaction_with()
+                      if mouse_interaction is None:
+                        continue
 
-                    section, data = mouse_interaction
-                    if section == "board" and selected_piece is not None:
-                      # Place piece on location on board
-                      game.set_position(selected_piece, Vector2(data[0], data[1]))
-                      selected_piece = None
-                    elif section =="player1" and game.active_player == game.player1:
-                      if data < len(game.player1.available_pieces):
-                        # Clicked on item in Player 1 inventory
-                        selected_piece = game.player1.available_pieces[data]
-                    elif section =="player2" and game.active_player == game.player2:
-                      if data < len(game.player2.available_pieces):
-                        # Clicked on item in Player 2 inventory
-                        selected_piece = game.player2.available_pieces[data]
+                      section, data = mouse_interaction
+                      if section == "board" and selected_piece is not None:
+                        # Place piece on location on board
+                        game.set_position(selected_piece, Vector2(data[0], data[1]))
+                        selected_piece = None
+                      elif section =="player1" and game.active_player == game.player1:
+                        if data < len(game.player1.available_pieces):
+                          # Clicked on item in Player 1 inventory
+                          selected_piece = game.player1.available_pieces[data]
+                      elif section =="player2" and game.active_player == game.player2:
+                        if data < len(game.player2.available_pieces):
+                          # Clicked on item in Player 2 inventory
+                          selected_piece = game.player2.available_pieces[data]
 
     # fill the window with a color to wipe away anything from last frame
     window.fill("lightgreen")

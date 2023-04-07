@@ -50,6 +50,9 @@ class Player:
   def used_pieces(self):
     return list(filter(lambda x: x.position != None, self.pieces))
 
+  def get_piece(self, type: PieceType):
+    return list(filter(lambda x: x.type == type, self.pieces))[0]
+
 class Game:
   player1: Player
   player2: Player
@@ -65,11 +68,22 @@ class Game:
   def players(self):
     return [self.player1, self.player2]
 
+  @property
+  def inactive_player(self):
+    return list(filter(lambda x: x != self.active_player, self.players))[0]
+
   def toggle_active_player(self):
     if self.active_player == self.player1:
       self.active_player = self.player2
     else:
       self.active_player = self.player1
+
+  @property
+  def in_stale_mate(self):
+    if self.winner is not None:
+      return False
+
+    return len(self.active_player.available_pieces) == 0
 
   def set_position(self, piece, position):
     if self.winner is not None:
