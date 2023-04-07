@@ -110,6 +110,10 @@ def draw_board_pieces():
           piece_option_size = piece_size / 4
           piece_option_y = y - piece_option_size * 0.75 - 10
           for (allowed_piece_player, allowed_pieces) in allowed_pieces.items():
+            if allowed_piece_player != game.player2:
+              piece_option_y += piece_option_size * 2.8
+              continue
+
             piece_option_x = x - (len(allowed_pieces) * piece_option_size * 0.75) / 2
             for allowed_piece in allowed_pieces:
               draw_piece(allowed_piece.type, allowed_piece_player.color, (piece_option_x, piece_option_y), piece_option_size)
