@@ -95,16 +95,11 @@ class Game:
     if piece.type not in set(map(lambda x: x.type, flatten(self.allowed_pieces_at(position).values()))):
       return None
 
+    is_winning_move, winning_move_pieces = self.is_winning_move(piece, position)
+    if is_winning_move:
+      self.winner = (self.active_player, winning_move_pieces)
+
     piece.position = position
-
-    for positions in self.interesting_positions_for(position)[:-1]:
-      section_pieces = positions + [position]
-      pieces = list(map(lambda x: self.piece_at(x), section_pieces))
-      pieces = set([piece[0].type for piece in pieces if piece is not None])
-
-      if len(pieces) == 4:
-        self.winner = (self.active_player, section_pieces)
-        return self.winner
 
     self.toggle_active_player()
 
@@ -166,3 +161,18 @@ class Game:
     all_vectors = horizontal_vectors + vertical_vectors + quadrant_vectors
 
     return horizontal_vectors, vertical_vectors, quadrant_vectors, all_vectors
+
+  def is_winning_move(self, piece, position):
+    piece.position = position
+
+    for positions in self.interesting_positions_for(position)[:-1]:
+      section_pieces = positions + [position]
+      pieces = list(map(lambda x: self.piece_at(x), section_pieces))
+      pieces = set([piece[0].type for piece in pieces if piece is not None])
+
+      if len(pieces) == 4:
+        piece.position = None
+        return True, section_pieces
+
+    piece.position = None
+    return False, None

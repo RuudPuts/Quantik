@@ -20,7 +20,7 @@ class AI:
           continue
 
         for piece in self.game.allowed_pieces_at(vector)[self.game.active_player]:
-          winnig_move = False # copy.deepcopy(self.game).set_position(piece, vector) is not None
+          winnig_move, _ = self.game.is_winning_move(piece, vector)
 
           if winnig_move:
             scores[100][piece.type].append(vector)
