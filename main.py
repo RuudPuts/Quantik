@@ -1,6 +1,7 @@
 import math
 import pygame
 from ai import AI
+from collections import defaultdict
 from utils import Vector2
 from quantik import Game, PieceType
 
@@ -93,19 +94,31 @@ def draw_board_pieces():
         else:
           pygame.draw.circle(window, "grey", (x, y), 10)
 
-        # allowed_pieces = game.allowed_pieces_at(Vector2(column, row))
-        # piece_option_size = piece_size / 4
-        # piece_option_y = y - piece_option_size * 0.75 - 10
-        # for (allowed_piece_player, allowed_pieces) in allowed_pieces.items():
-        #   piece_option_x = x - (len(allowed_pieces) * piece_option_size * 0.75) / 2
-        #   for allowed_piece in allowed_pieces:
-        #     draw_piece(allowed_piece.type, allowed_piece_player.color, (piece_option_x, piece_option_y), piece_option_size)
-        #     # if allowed_piece_player == game.active_player:
-        #     #   score = ai_scores[(column, row)][allowed_piece.type]
-        #     #   draw_text(str(score), (piece_option_x - piece_option_size/2, piece_option_y+piece_option_size/1.6), "red", 20)
+      if player2_is_bot and game.active_player == game.player2:
+        ai = AI(game)
+        scores = ai.calculate_move_scores()
 
-        #     piece_option_x += piece_option_size * 1.2
-        #   piece_option_y += piece_option_size * 2.8
+        # Convert scores to position:[piece] mapping
+        ai_scores = defaultdict(lambda: defaultdict(dict))
+        for score in scores:
+          for piece in scores[score]:
+            for vector in scores[score][piece]:
+              ai_scores[(vector.x, vector.y)][piece] = score
+
+        allowed_pieces = game.allowed_pieces_at(Vector2(column, row))
+        if allowed_pieces is not None:
+          piece_option_size = piece_size / 4
+          piece_option_y = y - piece_option_size * 0.75 - 10
+          for (allowed_piece_player, allowed_pieces) in allowed_pieces.items():
+            piece_option_x = x - (len(allowed_pieces) * piece_option_size * 0.75) / 2
+            for allowed_piece in allowed_pieces:
+              draw_piece(allowed_piece.type, allowed_piece_player.color, (piece_option_x, piece_option_y), piece_option_size)
+              if player2_is_bot and allowed_piece_player == game.player2:
+                score = ai_scores[(column, row)][allowed_piece.type]
+                draw_text(str(score), (piece_option_x - piece_option_size/2, piece_option_y+piece_option_size/1.6), "red", 20)
+
+              piece_option_x += piece_option_size * 1.2
+            piece_option_y += piece_option_size * 2.8
 
 
       x += piece_square_size
