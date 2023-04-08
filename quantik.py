@@ -118,12 +118,15 @@ class Game:
     if to_file:
       with open("game.json", "w") as outfile:
         outfile.write(data_json)
-    else:
-      print("")
-      print(data_json)
-      print("")
+    # else:
+    #   print("")
+    #   print(data_json)
+    #   print("")
 
     return data
+
+  def clone(self):
+    return Game(data=self.dump())
 
   @property
   def players(self):
@@ -164,7 +167,7 @@ class Game:
 
     self.toggle_active_player()
 
-    return True
+    return is_winning_move
 
   def piece_at(self, position):
     for player in self.players:

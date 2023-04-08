@@ -23,6 +23,8 @@ if load_from_dump:
 else:
   game = Game()
 selected_piece = None
+ai = AI(game)
+ai_move_scores = None
 
 def draw_text(text, position, color, size=48):
   font = pygame.font.SysFont(None, size)
@@ -101,35 +103,36 @@ def draw_board_pieces():
         else:
           pygame.draw.circle(window, "grey", (x, y), 10)
 
-      if player2_is_bot and game.active_player == game.player2:
-        ai = AI(game)
-        scores = ai.calculate_move_scores()
+      # if player2_is_bot and game.active_player == game.player2:
+      #   if ai_move_scores == None:
+      #     break
+      #   scores = ai_move_scores
 
-        # Convert scores to position:[piece] mapping
-        ai_scores = defaultdict(lambda: defaultdict(dict))
-        for score in scores:
-          for piece in scores[score]:
-            for vector in scores[score][piece]:
-              ai_scores[(vector.x, vector.y)][piece] = score
+      #   # Convert scores to position:[piece] mapping
+      #   ai_scores = defaultdict(lambda: defaultdict(dict))
+      #   for score in scores:
+      #     for piece in scores[score]:
+      #       for vector in scores[score][piece]:
+      #         ai_scores[(vector.x, vector.y)][piece] = score
 
-        allowed_pieces = game.allowed_pieces_at(Vector2(column, row))
-        if allowed_pieces is not None:
-          piece_option_size = piece_size / 4
-          piece_option_y = y - piece_option_size * 0.75 - 10
-          for (allowed_piece_player, allowed_pieces) in allowed_pieces.items():
-            if allowed_piece_player != game.player2:
-              piece_option_y += piece_option_size * 2.8
-              continue
+      #   allowed_pieces = game.allowed_pieces_at(Vector2(column, row))
+      #   if allowed_pieces is not None:
+      #     piece_option_size = piece_size / 4
+      #     piece_option_y = y - piece_option_size * 0.75 - 10
+      #     for (allowed_piece_player, allowed_pieces) in allowed_pieces.items():
+      #       if allowed_piece_player != game.player2:
+      #         piece_option_y += piece_option_size * 2.8
+      #         continue
 
-            piece_option_x = x - (len(allowed_pieces) * piece_option_size * 0.75) / 2
-            for allowed_piece in allowed_pieces:
-              draw_piece(allowed_piece.type, allowed_piece_player.color, (piece_option_x, piece_option_y), piece_option_size)
-              if player2_is_bot and allowed_piece_player == game.player2:
-                score = ai_scores[(column, row)][allowed_piece.type]
-                draw_text(str(score), (piece_option_x - piece_option_size/2, piece_option_y+piece_option_size/1.6), "red", 20)
+      #       piece_option_x = x - (len(allowed_pieces) * piece_option_size * 0.75) / 2
+      #       for allowed_piece in allowed_pieces:
+      #         draw_piece(allowed_piece.type, allowed_piece_player.color, (piece_option_x, piece_option_y), piece_option_size)
+      #         if player2_is_bot and allowed_piece_player == game.player2:
+      #           score = ai_scores[(column, row)][allowed_piece.type]
+      #           draw_text(str(score), (piece_option_x - piece_option_size/2, piece_option_y+piece_option_size/1.6), "red", 20)
 
-              piece_option_x += piece_option_size * 1.2
-            piece_option_y += piece_option_size * 2.8
+      #         piece_option_x += piece_option_size * 1.2
+      #       piece_option_y += piece_option_size * 2.8
 
 
       x += piece_square_size
@@ -269,7 +272,19 @@ def mouse_interaction_with():
 # result5 = game.set_position(game.player1.plus, Vector2(0, 1))
 
 player2_is_bot = True
+previous_player = None
 while running:
+    if game.active_player != previous_player:
+      ai_move_scores = None
+      if player2_is_bot and game.active_player == game.player2:
+        ai = AI(game)
+        print("> Switched to AI")
+        # ai_move_scores = ai.calculate_move_scores(log=False)
+        piece_type, position = ai.calculate_best_move()
+        print(f"{game.active_player.color} player set {piece_type} at {position}")
+        game.set_position(game.active_player.get_piece(piece_type), position)
+      previous_player = game.active_player
+
     # poll for events
     # pygame.QUIT event means the user clicked X to close your window
     for event in pygame.event.get():
@@ -282,8 +297,8 @@ while running:
                     game = Game()
                   else:
                     if player2_is_bot and game.active_player == game.player2:
-                      ai = AI(game)
                       piece_type, position = ai.calculate_best_move()
+                      print(f"{game.active_player.color} player set {piece_type} at {position}")
                       game.set_position(game.active_player.get_piece(piece_type), position)
                     else:
                       mouse_interaction = mouse_interaction_with()
@@ -293,6 +308,7 @@ while running:
                       section, data = mouse_interaction
                       if section == "board" and selected_piece is not None:
                         # Place piece on location on board
+                        print(f"{game.active_player.color} player set {selected_piece.type} at {Vector2(data[0], data[1])}")
                         game.set_position(selected_piece, Vector2(data[0], data[1]))
                         selected_piece = None
                       elif section =="player1" and game.active_player == game.player1:
@@ -312,7 +328,6 @@ while running:
     draw_players()
 
     draw_mouse()
-
 
     keys = pygame.key.get_pressed()
     if keys[pygame.K_r]:
